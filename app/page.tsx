@@ -1,8 +1,9 @@
 import ExploreBtn from "@/components/ExploreBtn";
 import EventCard from "@/components/EventCard";
 import { events as staticEvents, type EventItem } from "@/lib/constants";
+import { getBaseUrl } from "@/lib/utils";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? '';
+const BASE_URL = getBaseUrl();
 
 const Page = async () => {
     let dbEvents: EventItem[] = [];
