@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import EventDetails from "@/components/EventDetails";
 import { events as staticEvents } from "@/lib/constants";
+import Loader from "@/components/Loader";
 
 // Generate static params for known events to prevent undefined slug during build
 export async function generateStaticParams() {
@@ -20,7 +21,7 @@ const EventDetailsPage = async ({ params }: { params: Promise<{ slug: string }> 
     
     return (
         <main>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<Loader />}>
                 <EventDetails slug={resolvedParams.slug} />
             </Suspense>
         </main>
