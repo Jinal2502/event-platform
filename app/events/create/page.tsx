@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ const CreateEventPage = () => {
     });
     const [image, setImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const imageInputRef = useRef<HTMLInputElement | null>(null);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -432,16 +433,30 @@ const CreateEventPage = () => {
                                     </div>
                                 </div>
                             )}
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 <Label htmlFor="image" className="text-light-100">Event Banner Image *</Label>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => imageInputRef.current?.click()}
+                                        className="border-dashed border-primary/60 bg-dark-200/60 text-light-100 hover:bg-dark-200 hover:border-primary flex items-center gap-2 px-4 py-2 rounded-md"
+                                    >
+                                        <ImageIcon className="w-4 h-4" />
+                                        <span>Choose Image</span>
+                                    </Button>
+                                    <span className="text-xs text-light-200 truncate max-w-xs">
+                                        {image ? image.name : 'No file selected'}
+                                    </span>
+                                </div>
                                 <Input
                                     type="file"
                                     id="image"
                                     name="image"
                                     accept="image/*"
                                     onChange={handleImageChange}
-                                    required
-                                    className="bg-dark-200 border-dark-200 text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-black hover:file:bg-primary/90 file:cursor-pointer"
+                                    ref={imageInputRef}
+                                    className="hidden"
                                 />
                                 <p className="text-sm text-light-200">Recommended: 1200x600px or larger</p>
                             </div>
