@@ -127,8 +127,6 @@ const EventDetails = async ({ slug }: { slug: string }) => {
             agenda: ['Registration', 'Opening Keynote', 'Workshop Sessions'],
             organizer: 'Event Organizers',
             tags: ['tech', 'conference'],
-            createdAt: new Date(),
-            updatedAt: new Date(),
         })) as unknown as IEvent[];
 
     return (
