@@ -6,6 +6,7 @@ import Image from "next/image";
 import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
 import { events as staticEvents } from "@/lib/constants";
+import { getBaseUrl } from "@/lib/utils";
 
 const EventDetailItem = ({ icon, alt, label }: { icon: string; alt: string; label: string; }) => (
     <div className="flex-row-gap-2 items-center">
@@ -39,55 +40,43 @@ const EventDetails = async ({ slug }: { slug: string }) => {
         return notFound();
     }
 
-    // Use relative URL - works in both dev and production
-    // Next.js automatically caches fetch requests by default
-    // This will cache the response so subsequent loads are instant
     let event: any;
-    try {
-        const request = await fetch(`/api/events/${slug}`, {
-            next: { revalidate: 3600 } // Cache for 1 hour, then revalidate in background
-        });
+    
+    // During build, use static events. At runtime, fetch from API
+    const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
+    
+    if (!isBuildTime) {
+        // Runtime: Fetch from API
+        const BASE_URL = getBaseUrl();
+        const apiUrl = BASE_URL ? `${BASE_URL}/api/events/${slug}` : `/api/events/${slug}`;
+        
+        try {
+            const request = await fetch(apiUrl, {
+                next: { revalidate: 3600 } // Cache for 1 hour, then revalidate in background
+            });
 
-        if (!request.ok) {
-            if (request.status === 404) {
-                // Fallback to static events from constants
-                const staticEvent = staticEvents.find(e => e.slug === slug);
-                if (staticEvent) {
-                    // Convert static event to full event format with default values
-                    event = {
-                        _id: `static-${slug}`,
-                        slug: staticEvent.slug,
-                        title: staticEvent.title,
-                        description: `${staticEvent.title} - Join us for an amazing event!`,
-                        overview: `Don't miss out on ${staticEvent.title}. This is a must-attend event for developers.`,
-                        image: staticEvent.image,
-                        venue: staticEvent.location,
-                        location: staticEvent.location,
-                        date: staticEvent.date,
-                        time: staticEvent.time,
-                        mode: 'hybrid',
-                        audience: 'Developers',
-                        agenda: ['Registration', 'Opening Keynote', 'Workshop Sessions', 'Networking'],
-                        organizer: 'Event Organizers',
-                        tags: ['tech', 'conference', 'networking'],
-                    };
+            if (!request.ok) {
+                if (request.status === 404) {
+                    // Will fall through to static events below
                 } else {
-                    return notFound();
+                    throw new Error(`Failed to fetch event: ${request.statusText}`);
                 }
             } else {
-                throw new Error(`Failed to fetch event: ${request.statusText}`);
-            }
-        } else {
-            const response = await request.json();
-            event = response.event;
+                const response = await request.json();
+                event = response.event;
 
-            if (!event) {
-                return notFound();
+                if (!event) {
+                    // Will fall through to static events below
+                }
             }
+        } catch (error) {
+            console.error('Error fetching event:', error);
+            // Fall through to static events
         }
-    } catch (error) {
-        console.error('Error fetching event:', error);
-        // Try static events as fallback
+    }
+    
+    // Use static events if no event found (build time or API failure)
+    if (!event) {
         const staticEvent = staticEvents.find(e => e.slug === slug);
         if (staticEvent) {
             event = {
@@ -118,15 +107,15 @@ const EventDetails = async ({ slug }: { slug: string }) => {
 
     const bookings = 10;
 
-    // Fetch similar events - don't block if it's slow
+    // Fetch similar events - use static events during build, real data at runtime
     let similarEvents: IEvent[] = [];
     try {
-        // Use Promise.race with a reasonable timeout
+        // Quick timeout to prevent build blocking
         similarEvents = await Promise.race([
             getSimilarEventsBySlug(slug),
             new Promise<IEvent[]>((resolve) => {
                 setTimeout(() => {
-                    // Return static events as fallback if DB is slow
+                    // Return static events as fallback
                     const otherStaticEvents = staticEvents
                         .filter(e => e.slug !== slug)
                         .slice(0, 6)
@@ -150,7 +139,7 @@ const EventDetails = async ({ slug }: { slug: string }) => {
                             updatedAt: new Date(),
                         })) as unknown as IEvent[];
                     resolve(otherStaticEvents);
-                }, 3000); // 3 second timeout
+                }, 2000); // 2 second timeout for build
             })
         ]);
     } catch (error) {
