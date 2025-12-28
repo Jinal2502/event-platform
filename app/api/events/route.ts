@@ -1,8 +1,15 @@
 import {NextRequest, NextResponse} from "next/server";
-// import { v2 as cloudinary } from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 
 import connectDB from "@/lib/mongodb";
-import Event from '@/database/event.model';
+import { Event } from '@/database';
+
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(req: NextRequest) {
     try {
@@ -25,18 +32,49 @@ export async function POST(req: NextRequest) {
         let tags = JSON.parse(formData.get('tags') as string);
         let agenda = JSON.parse(formData.get('agenda') as string);
 
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        // Check if Cloudinary is configured
+        const isCloudinaryConfigured = 
+            process.env.CLOUDINARY_CLOUD_NAME && 
+            process.env.CLOUDINARY_API_KEY && 
+            process.env.CLOUDINARY_API_SECRET;
 
-        const uploadResult = await new Promise((resolve, reject) => {
-            cloudinary.uploader.upload_stream({ resource_type: 'image', folder: 'DevEvent' }, (error, results) => {
-                if(error) return reject(error);
+        let imageUrl: string;
 
-                resolve(results);
-            }).end(buffer);
-        });
+        if (isCloudinaryConfigured) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
 
-        event.image = (uploadResult as { secure_url: string }).secure_url;
+                const uploadResult = await new Promise((resolve, reject) => {
+                    cloudinary.uploader.upload_stream({ resource_type: 'image', folder: 'DevEvent' }, (error: Error | undefined, results: any) => {
+                        if(error) return reject(error);
+
+                        resolve(results);
+                    }).end(buffer);
+                });
+
+                imageUrl = (uploadResult as { secure_url: string }).secure_url;
+            } catch (cloudinaryError: any) {
+                console.error('Cloudinary upload error:', cloudinaryError);
+                return NextResponse.json({ 
+                    message: 'Image upload failed', 
+                    error: cloudinaryError.message || 'Cloudinary configuration error. Please check your environment variables.',
+                    details: cloudinaryError.http_code === 401 ? 'Invalid Cloudinary API credentials. Please check CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, and CLOUDINARY_CLOUD_NAME in your .env file.' : cloudinaryError.message
+                }, { status: 500 });
+            }
+        } else {
+            // Fallback: Use a placeholder or data URL for development
+            // In production, you should always have Cloudinary configured
+            const arrayBuffer = await file.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64 = buffer.toString('base64');
+            const mimeType = file.type || 'image/png';
+            imageUrl = `data:${mimeType};base64,${base64}`;
+            
+            console.warn('Cloudinary not configured. Using base64 data URL. Please configure Cloudinary for production use.');
+        }
+
+        event.image = imageUrl;
 
         const createdEvent = await Event.create({
             ...event,
