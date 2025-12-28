@@ -8,8 +8,6 @@ import EventCard from "@/components/EventCard";
 import { events as staticEvents } from "@/lib/constants";
 import { getBaseUrl } from "@/lib/utils";
 
-const BASE_URL = getBaseUrl();
-
 const EventDetailItem = ({ icon, alt, label }: { icon: string; alt: string; label: string; }) => (
     <div className="flex-row-gap-2 items-center">
         <Image src={icon} alt={alt} width={17} height={17} />
@@ -42,6 +40,20 @@ const EventDetails = async ({ slug }: { slug: string }) => {
         return notFound();
     }
 
+    // Get BASE_URL inside the function to ensure it's evaluated at runtime
+    let BASE_URL = getBaseUrl();
+    
+    // Validate URL format - if invalid, use relative URL
+    if (BASE_URL) {
+        try {
+            // Test if the URL is valid by constructing a URL object
+            new URL(`${BASE_URL}/api/events/${slug}`);
+        } catch {
+            // If URL construction fails, fall back to relative URL
+            BASE_URL = '';
+        }
+    }
+    
     let event: any;
     try {
         const request = await fetch(`${BASE_URL}/api/events/${slug}`, {

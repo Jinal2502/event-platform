@@ -3,9 +3,10 @@ import EventCard from "@/components/EventCard";
 import { events as staticEvents, type EventItem } from "@/lib/constants";
 import { getBaseUrl } from "@/lib/utils";
 
-const BASE_URL = getBaseUrl();
-
 const Page = async () => {
+    // Get BASE_URL inside the function to ensure it's evaluated at runtime
+    const BASE_URL = getBaseUrl();
+    
     let dbEvents: EventItem[] = [];
     
     // Fetch events from database
