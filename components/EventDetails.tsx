@@ -6,7 +6,6 @@ import Image from "next/image";
 import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
 import { events as staticEvents } from "@/lib/constants";
-import { getBaseUrl } from "@/lib/utils";
 
 const EventDetailItem = ({ icon, alt, label }: { icon: string; alt: string; label: string; }) => (
     <div className="flex-row-gap-2 items-center">
@@ -40,14 +39,13 @@ const EventDetails = async ({ slug }: { slug: string }) => {
         return notFound();
     }
 
-    // Get BASE_URL and use it for API calls
-    const BASE_URL = getBaseUrl();
-    const apiUrl = BASE_URL ? `${BASE_URL}/api/events/${slug}` : `/api/events/${slug}`;
-    
+    // Use relative URL - works in both dev and production
+    // Next.js automatically caches fetch requests by default
+    // This will cache the response so subsequent loads are instant
     let event: any;
     try {
-        const request = await fetch(apiUrl, {
-            next: { revalidate: 60 } // Cache for 60 seconds like before
+        const request = await fetch(`/api/events/${slug}`, {
+            next: { revalidate: 3600 } // Cache for 1 hour, then revalidate in background
         });
 
         if (!request.ok) {
@@ -120,8 +118,66 @@ const EventDetails = async ({ slug }: { slug: string }) => {
 
     const bookings = 10;
 
-    // Fetch similar events - restore original functionality
-    const similarEvents: IEvent[] = await getSimilarEventsBySlug(slug);
+    // Fetch similar events - don't block if it's slow
+    let similarEvents: IEvent[] = [];
+    try {
+        // Use Promise.race with a reasonable timeout
+        similarEvents = await Promise.race([
+            getSimilarEventsBySlug(slug),
+            new Promise<IEvent[]>((resolve) => {
+                setTimeout(() => {
+                    // Return static events as fallback if DB is slow
+                    const otherStaticEvents = staticEvents
+                        .filter(e => e.slug !== slug)
+                        .slice(0, 6)
+                        .map(e => ({
+                            _id: `static-${e.slug}`,
+                            title: e.title,
+                            slug: e.slug,
+                            description: `${e.title} - Join us for an amazing event!`,
+                            overview: `Don't miss out on ${e.title}.`,
+                            image: e.image,
+                            venue: e.location,
+                            location: e.location,
+                            date: e.date,
+                            time: e.time,
+                            mode: 'hybrid' as const,
+                            audience: 'Developers',
+                            agenda: ['Registration', 'Opening Keynote', 'Workshop Sessions'],
+                            organizer: 'Event Organizers',
+                            tags: ['tech', 'conference'],
+                            createdAt: new Date(),
+                            updatedAt: new Date(),
+                        })) as unknown as IEvent[];
+                    resolve(otherStaticEvents);
+                }, 3000); // 3 second timeout
+            })
+        ]);
+    } catch (error) {
+        // Fallback to static events if similar events fail
+        similarEvents = staticEvents
+            .filter(e => e.slug !== slug)
+            .slice(0, 6)
+            .map(e => ({
+                _id: `static-${e.slug}`,
+                title: e.title,
+                slug: e.slug,
+                description: `${e.title} - Join us for an amazing event!`,
+                overview: `Don't miss out on ${e.title}.`,
+                image: e.image,
+                venue: e.location,
+                location: e.location,
+                date: e.date,
+                time: e.time,
+                mode: 'hybrid' as const,
+                audience: 'Developers',
+                agenda: ['Registration', 'Opening Keynote', 'Workshop Sessions'],
+                organizer: 'Event Organizers',
+                tags: ['tech', 'conference'],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            })) as unknown as IEvent[];
+    }
 
     return (
         <section id="event">
