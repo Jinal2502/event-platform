@@ -1,10 +1,9 @@
-import ExploreBtn from "@/components/ExploreBtn";
 import EventCard from "@/components/EventCard";
 import { events as staticEvents, type EventItem } from "@/lib/constants";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-const Page = async () => {
+const EventsPage = async () => {
     let dbEvents: EventItem[] = [];
     
     // Fetch events from database
@@ -38,14 +37,9 @@ const Page = async () => {
     const events: EventItem[] = [...dbEvents, ...uniqueStaticEvents];
 
     return (
-        <section>
-            <h1 className="text-center">The Hub for Every Dev <br /> Event You Can't Miss</h1>
-            <p className="text-center mt-5">Hackathons, Meetups, and Conferences, All in One Place</p>
-
-            <ExploreBtn />
-
-            <div className="mt-20 space-y-7">
-                <h3>Featured Events</h3>
+        <main>
+            <section>
+                <h1 className="text-center mb-10">All Events</h1>
 
                 <ul className="events">
                     {events && events.length > 0 && events.map((event: EventItem) => (
@@ -54,9 +48,10 @@ const Page = async () => {
                         </li>
                     ))}
                 </ul>
-            </div>
-        </section>
+            </section>
+        </main>
     )
 }
 
-export default Page;
+export default EventsPage
+
