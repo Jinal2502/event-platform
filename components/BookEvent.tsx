@@ -7,27 +7,47 @@ import posthog from "posthog-js";
 const BookEvent = ({ eventId, slug }: { eventId: string, slug: string;}) => {
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
+        setError('');
 
-        const { success } = await createBooking({ eventId, slug, email });
+        if (!email || !email.includes('@')) {
+            setError('Please enter a valid email address');
+            setLoading(false);
+            return;
+        }
 
-        if(success) {
-            setSubmitted(true);
-            posthog.capture('event_booked', { eventId, slug, email })
-        } else {
-            console.error('Booking creation failed')
-            posthog.captureException('Booking creation failed')
+        try {
+            const { success } = await createBooking({ eventId, slug, email });
+
+            if(success) {
+                setSubmitted(true);
+                posthog.capture('event_booked', { eventId, slug, email });
+            } else {
+                setError('Failed to book event. Please try again.');
+                posthog.capture('booking_failed', { eventId, slug, email });
+            }
+        } catch (err) {
+            setError('An error occurred. Please try again.');
+            console.error('Booking error:', err);
+        } finally {
+            setLoading(false);
         }
     }
 
     return (
         <div id="book-event">
             {submitted ? (
-                <p className="text-sm">Thank you for signing up!</p>
+                <div className="text-center space-y-2">
+                    <p className="text-primary font-semibold">✓ You're Booked!</p>
+                    <p className="text-sm text-light-200">Thank you for signing up. We'll see you at the event!</p>
+                </div>
             ): (
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="email">Email Address</label>
                         <input
@@ -36,10 +56,22 @@ const BookEvent = ({ eventId, slug }: { eventId: string, slug: string;}) => {
                             onChange={(e) => setEmail(e.target.value)}
                             id="email"
                             placeholder="Enter your email address"
+                            required
+                            disabled={loading}
+                            className={error ? 'border-red-500' : ''}
                         />
+                        {error && (
+                            <p className="text-red-400 text-xs mt-1">{error}</p>
+                        )}
                     </div>
 
-                    <button type="submit" className="button-submit">Submit</button>
+                    <button 
+                        type="submit" 
+                        className="button-submit"
+                        disabled={loading || !email}
+                    >
+                        {loading ? 'Booking...' : 'Book Your Spot'}
+                    </button>
                 </form>
             )}
         </div>
