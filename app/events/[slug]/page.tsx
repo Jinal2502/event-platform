@@ -10,9 +10,6 @@ export async function generateStaticParams() {
     }));
 }
 
-// Make this route dynamic to handle runtime-generated slugs
-export const dynamicParams = true;
-
 const EventDetailsPage = async ({ params }: { params: Promise<{ slug: string }> | { slug: string } }) => {
     // Handle both Promise and direct params (for Next.js 15+ compatibility)
     const resolvedParams = params instanceof Promise ? await params : params;
