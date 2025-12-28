@@ -1,7 +1,6 @@
 import React from 'react'
 import {notFound} from "next/navigation";
 import {IEvent} from "@/database";
-import {getSimilarEventsBySlug} from "@/lib/actions/event.actions";
 import Image from "next/image";
 import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
@@ -107,66 +106,30 @@ const EventDetails = async ({ slug }: { slug: string }) => {
 
     const bookings = 10;
 
-    // Fetch similar events - use static events during build, real data at runtime
-    let similarEvents: IEvent[] = [];
-    try {
-        // Quick timeout to prevent build blocking
-        similarEvents = await Promise.race([
-            getSimilarEventsBySlug(slug),
-            new Promise<IEvent[]>((resolve) => {
-                setTimeout(() => {
-                    // Return static events as fallback
-                    const otherStaticEvents = staticEvents
-                        .filter(e => e.slug !== slug)
-                        .slice(0, 6)
-                        .map(e => ({
-                            _id: `static-${e.slug}`,
-                            title: e.title,
-                            slug: e.slug,
-                            description: `${e.title} - Join us for an amazing event!`,
-                            overview: `Don't miss out on ${e.title}.`,
-                            image: e.image,
-                            venue: e.location,
-                            location: e.location,
-                            date: e.date,
-                            time: e.time,
-                            mode: 'hybrid' as const,
-                            audience: 'Developers',
-                            agenda: ['Registration', 'Opening Keynote', 'Workshop Sessions'],
-                            organizer: 'Event Organizers',
-                            tags: ['tech', 'conference'],
-                            createdAt: new Date(),
-                            updatedAt: new Date(),
-                        })) as unknown as IEvent[];
-                    resolve(otherStaticEvents);
-                }, 2000); // 2 second timeout for build
-            })
-        ]);
-    } catch (error) {
-        // Fallback to static events if similar events fail
-        similarEvents = staticEvents
-            .filter(e => e.slug !== slug)
-            .slice(0, 6)
-            .map(e => ({
-                _id: `static-${e.slug}`,
-                title: e.title,
-                slug: e.slug,
-                description: `${e.title} - Join us for an amazing event!`,
-                overview: `Don't miss out on ${e.title}.`,
-                image: e.image,
-                venue: e.location,
-                location: e.location,
-                date: e.date,
-                time: e.time,
-                mode: 'hybrid' as const,
-                audience: 'Developers',
-                agenda: ['Registration', 'Opening Keynote', 'Workshop Sessions'],
-                organizer: 'Event Organizers',
-                tags: ['tech', 'conference'],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            })) as unknown as IEvent[];
-    }
+    // Use static events for similar events immediately - don't block on database
+    // This ensures the page loads instantly
+    const similarEvents: IEvent[] = staticEvents
+        .filter(e => e.slug !== slug)
+        .slice(0, 6)
+        .map(e => ({
+            _id: `static-${e.slug}`,
+            title: e.title,
+            slug: e.slug,
+            description: `${e.title} - Join us for an amazing event!`,
+            overview: `Don't miss out on ${e.title}.`,
+            image: e.image,
+            venue: e.location,
+            location: e.location,
+            date: e.date,
+            time: e.time,
+            mode: 'hybrid' as const,
+            audience: 'Developers',
+            agenda: ['Registration', 'Opening Keynote', 'Workshop Sessions'],
+            organizer: 'Event Organizers',
+            tags: ['tech', 'conference'],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })) as unknown as IEvent[];
 
     return (
         <section id="event">
