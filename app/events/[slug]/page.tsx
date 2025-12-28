@@ -1,16 +1,14 @@
-import {Suspense} from "react";
+import { Suspense } from "react";
 import EventDetails from "@/components/EventDetails";
 
-const EventDetailsPage = async ({ params }: { params: Promise<{ slug: string }>}) => {
-    const { slug } = await params;
-    const slugPromise = Promise.resolve(slug);
-
+const EventDetailsPage = ({ params }: { params: { slug: string } }) => {
     return (
         <main>
             <Suspense fallback={<div>Loading...</div>}>
-                <EventDetails params={slugPromise} />
+                <EventDetails slug={params.slug} />
             </Suspense>
         </main>
-    )
-}
-export default EventDetailsPage
+    );
+};
+
+export default EventDetailsPage;

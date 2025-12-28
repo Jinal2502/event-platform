@@ -2,7 +2,7 @@ import ExploreBtn from "@/components/ExploreBtn";
 import EventCard from "@/components/EventCard";
 import { events as staticEvents, type EventItem } from "@/lib/constants";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? '';
 
 const Page = async () => {
     let dbEvents: EventItem[] = [];
