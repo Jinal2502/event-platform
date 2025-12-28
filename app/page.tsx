@@ -3,6 +3,9 @@ import EventCard from "@/components/EventCard";
 import { events as staticEvents, type EventItem } from "@/lib/constants";
 import { getBaseUrl } from "@/lib/utils";
 
+// Force dynamic rendering since we're fetching from database
+export const dynamic = 'force-dynamic';
+
 const Page = async () => {
     // Get BASE_URL inside the function to ensure it's evaluated at runtime
     const BASE_URL = getBaseUrl();
