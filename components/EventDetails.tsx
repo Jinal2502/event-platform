@@ -6,7 +6,6 @@ import Image from "next/image";
 import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
 import { events as staticEvents } from "@/lib/constants";
-import { getBaseUrl } from "@/lib/utils";
 
 const EventDetailItem = ({ icon, alt, label }: { icon: string; alt: string; label: string; }) => (
     <div className="flex-row-gap-2 items-center">
@@ -40,24 +39,11 @@ const EventDetails = async ({ slug }: { slug: string }) => {
         return notFound();
     }
 
-    // Get BASE_URL inside the function to ensure it's evaluated at runtime
-    let BASE_URL = getBaseUrl();
-    
-    // Validate URL format - if invalid, use relative URL
-    if (BASE_URL) {
-        try {
-            // Test if the URL is valid by constructing a URL object
-            new URL(`${BASE_URL}/api/events/${slug}`);
-        } catch {
-            // If URL construction fails, fall back to relative URL
-            BASE_URL = '';
-        }
-    }
-    
+    // Always use relative URL for API calls (works in both dev and production)
     let event: any;
     try {
-        const request = await fetch(`${BASE_URL}/api/events/${slug}`, {
-            next: { revalidate: 60 }
+        const request = await fetch(`/api/events/${slug}`, {
+            cache: 'no-store', // Always fetch fresh data
         });
 
         if (!request.ok) {
@@ -130,7 +116,21 @@ const EventDetails = async ({ slug }: { slug: string }) => {
 
     const bookings = 10;
 
-    const similarEvents: IEvent[] = await getSimilarEventsBySlug(slug);
+    // Fetch similar events, but don't block if it fails
+    let similarEvents: IEvent[] = [];
+    try {
+        similarEvents = await Promise.race([
+            getSimilarEventsBySlug(slug),
+            new Promise<IEvent[]>((resolve) => {
+                // Timeout after 2 seconds
+                setTimeout(() => resolve([]), 2000);
+            })
+        ]);
+    } catch (error) {
+        // If similar events fail, just use empty array
+        console.error('Error fetching similar events:', error);
+        similarEvents = [];
+    }
 
     return (
         <section id="event">
