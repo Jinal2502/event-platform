@@ -1,12 +1,10 @@
 import ExploreBtn from "@/components/ExploreBtn";
-import EventCard from "@/components/EventCard";
-import { events as staticEvents, type EventItem } from "@/lib/constants";
+import { events as staticEvents } from "@/lib/constants";
+import EventsList from "@/components/EventsList";
 
 const Page = async () => {
-    // For now, use only static events to avoid build issues
-    // Database events can be fetched client-side if needed
-    // This ensures the page builds successfully
-    const events: EventItem[] = staticEvents;
+    // Use static events for initial render (fast build, fast initial load)
+    // Database events will be fetched client-side and merged in
 
     return (
         <section>
@@ -19,11 +17,7 @@ const Page = async () => {
                 <h3>Featured Events</h3>
 
                 <ul className="events">
-                    {events && events.length > 0 && events.map((event: EventItem) => (
-                        <li key={event.slug} className="list-none">
-                            <EventCard {...event} />
-                        </li>
-                    ))}
+                    <EventsList initialEvents={staticEvents} />
                 </ul>
             </div>
         </section>
