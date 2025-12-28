@@ -6,6 +6,7 @@ import Image from "next/image";
 import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
 import { events as staticEvents } from "@/lib/constants";
+import { getBaseUrl } from "@/lib/utils";
 
 const EventDetailItem = ({ icon, alt, label }: { icon: string; alt: string; label: string; }) => (
     <div className="flex-row-gap-2 items-center">
@@ -39,11 +40,14 @@ const EventDetails = async ({ slug }: { slug: string }) => {
         return notFound();
     }
 
-    // Always use relative URL for API calls (works in both dev and production)
+    // Get BASE_URL and use it for API calls
+    const BASE_URL = getBaseUrl();
+    const apiUrl = BASE_URL ? `${BASE_URL}/api/events/${slug}` : `/api/events/${slug}`;
+    
     let event: any;
     try {
-        const request = await fetch(`/api/events/${slug}`, {
-            cache: 'no-store', // Always fetch fresh data
+        const request = await fetch(apiUrl, {
+            next: { revalidate: 60 } // Cache for 60 seconds like before
         });
 
         if (!request.ok) {
@@ -116,21 +120,8 @@ const EventDetails = async ({ slug }: { slug: string }) => {
 
     const bookings = 10;
 
-    // Fetch similar events, but don't block if it fails
-    let similarEvents: IEvent[] = [];
-    try {
-        similarEvents = await Promise.race([
-            getSimilarEventsBySlug(slug),
-            new Promise<IEvent[]>((resolve) => {
-                // Timeout after 2 seconds
-                setTimeout(() => resolve([]), 2000);
-            })
-        ]);
-    } catch (error) {
-        // If similar events fail, just use empty array
-        console.error('Error fetching similar events:', error);
-        similarEvents = [];
-    }
+    // Fetch similar events - restore original functionality
+    const similarEvents: IEvent[] = await getSimilarEventsBySlug(slug);
 
     return (
         <section id="event">
